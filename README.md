@@ -1,8 +1,8 @@
 # GetQClawAPIKey
 
-从已登录的本机 QClaw 客户端中提取明文 `apiKey` 的工具。提供 **Node.js CLI** 和 **macOS 菜单栏应用** 两种使用方式。
+> QClaw API Key 提取工具 — 从 macOS 本机已登录的 QClaw 客户端中解密并提取 API Key，支持 OpenAI 兼容的 `chat/completions` 接口调用。
 
-无需模拟登录或调用 QClaw 登录接口，只需在官方 QClaw 客户端完成一次登录/授权，即可读取本地存储的 provider key。
+提供 **Node.js CLI** 和 **原生 SwiftUI macOS 菜单栏应用** 两种使用方式。无需模拟登录，从本地 Keychain 和 `app-store.json` 中自动解密，即可获取 QClaw API Key、查看可用模型列表（DeepSeek-V4、GLM-5.2、Kimi-K2.7 等）、查询积分余额与 Token 用量。
 
 ## 项目结构
 
