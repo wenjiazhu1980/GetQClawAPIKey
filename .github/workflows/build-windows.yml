@@ -50,6 +50,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           gh release delete latest-win --yes --cleanup-tag 2>$null
+          exit 0
         env:
           GH_TOKEN: ${{ github.token }}
 
