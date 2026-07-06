@@ -12,6 +12,9 @@ on:
       - 'GetQClaw-macOS/**'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-latest
@@ -19,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Build
         run: |
@@ -34,7 +39,6 @@ jobs:
 
           mkdir -p "$DMG_DIR"
           cp -R "$APP_DIR" "$DMG_DIR/"
-          # Create symlink to /Applications for drag-to-install
           ln -s /Applications "$DMG_DIR/Applications"
 
           hdiutil create \
@@ -54,9 +58,39 @@ jobs:
           path: GetQClaw.dmg
           retention-days: 30
 
-      - name: Upload app artifact (zip)
-        uses: actions/upload-artifact@v4
+      # -------- Release (push to main / workflow_dispatch only) --------
+      - name: Delete old latest release
+        if: github.event_name != 'pull_request'
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create latest tag
+        if: github.event_name != 'pull_request'
+        run: |
+          git tag -f latest
+          git push -f origin latest
+
+      - name: Create Release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
         with:
-          name: GetQClaw-app
-          path: GetQClaw-macOS/build/GetQClaw.app
-          retention-days: 30
+          tag_name: latest
+          name: "GetQClaw — Latest Build"
+          body: |
+            ## macOS 菜单栏应用
+
+            从已登录的 QClaw 客户端提取 API Key，查看模型列表和积分余额。
+
+            ### 安装
+
+            1. 下载 `GetQClaw.dmg`
+            2. 双击打开，将 `GetQClaw.app` 拖入 `Applications`
+            3. 首次运行时允许 Keychain 访问
+
+            > 构建自 commit [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+          files: GetQClaw.dmg
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
