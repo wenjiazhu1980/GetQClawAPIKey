@@ -1,62 +1,114 @@
 # GetQClawAPIKey
 
-从已登录的本机 QClaw 中提取并打印明文 `apiKey` 的本地 Node CLI。
+从已登录的本机 QClaw 客户端中提取明文 `apiKey` 的工具。提供 **Node.js CLI** 和 **macOS 菜单栏应用** 两种使用方式。
 
-这个项目现在不再模拟 QClaw 微信扫码登录，也不再调用 QClaw 登录接口。你需要先在官方 QClaw 客户端里完成一次登录/授权；脚本随后读取 QClaw 保存到本机的 provider key。
+无需模拟登录或调用 QClaw 登录接口，只需在官方 QClaw 客户端完成一次登录/授权，即可读取本地存储的 provider key。
 
-## Quick Start
+## 项目结构
+
+```
+├── lib/qclaw.mjs              # 核心库：解密、API 请求封装
+├── scripts/
+│   ├── get-key.mjs            # 提取并打印 apiKey
+│   ├── models.mjs             # 查看可用模型列表
+│   └── balance.mjs            # 查询积分余额和用量
+├── test/qclaw.test.mjs        # 单元测试
+├── GetQClaw-macOS/            # macOS 菜单栏应用（SwiftUI）
+│   ├── Sources/               # Swift 源码
+│   ├── build.sh               # 构建脚本
+│   └── build/                 # 预构建的 .app 捆绑包
+└── package.json
+```
+
+## 前置条件
+
+- macOS
+- 已安装 QClaw 客户端
+- 已打开 QClaw 并完成一次登录/授权
+- 运行时允许访问 macOS Keychain 中的 `QClaw Safe Storage`
+
+## Node.js CLI
+
+### 快速开始
 
 ```bash
 npm install
 npm start
 ```
 
-仅打印 key，不输出 `curl` 示例：
+仅打印 key，不输出 curl 示例：
 
 ```bash
 node scripts/get-key.mjs --key-only
 ```
 
-查看 QClaw 当前模型列表：
+### 查看模型列表
 
 ```bash
 npm run models
+npm run models -- --json
 ```
 
-查询每日额度和当天用量汇总：
+### 查询积分余额和用量
 
 ```bash
 npm run balance
+npm run balance -- --json
+npm run balance -- --json --records
+npm run balance -- --page 2 --page-size 50
+npm run balance -- --tokens
+npm run balance -- --tokens --date 2026-06-29
 ```
 
-## 前置条件
+默认输出：积分余额、活动积分、订阅积分、积分包余额、每日赠送总额、积分流水统计。
 
-- macOS
-- 已安装 QClaw
-- 已打开 QClaw 并完成一次登录/授权
-- 运行脚本时允许访问 macOS Keychain 中的 `QClaw Safe Storage`
+- `--records`：在 JSON 输出中包含原始流水明细
+- `--tokens`：额外输出每日 token 配额和指定日期的用量汇总
 
-脚本默认读取：
+### 运行测试
+
+```bash
+npm test
+```
+
+## macOS 菜单栏应用
+
+一个原生 SwiftUI 菜单栏应用，在菜单栏显示 QClaw 图标，点击后可在 **API Key**、**模型列表**、**余额** 三个标签页间切换查看。
+
+### 构建
+
+```bash
+cd GetQClaw-macOS
+./build.sh
+```
+
+构建产物位于 `GetQClaw-macOS/build/GetQClaw.app`。
+
+### 运行
+
+```bash
+open GetQClaw-macOS/build/GetQClaw.app
+```
+
+或拖入 `/Applications` 后从启动台打开。首次运行需要在 Keychain 弹窗中允许访问。
+
+## 原理
+
+QClaw 登录后将默认 provider 的 key 存在：
 
 ```text
 ~/Library/Application Support/QClaw/app-store.json
 ```
 
-也可以通过环境变量覆盖：
+键路径：`authGateway.providers.qclaw.apiKey`
+
+该值是 Chromium/Electron `v10` 格式密文。工具从 macOS Keychain 读取 `QClaw Safe Storage` / `QClaw Key`，使用 AES-128-CBC 解密后输出明文 key。
+
+也可以通过环境变量覆盖路径：
 
 ```bash
 QCLAW_APP_STORE_PATH=/path/to/app-store.json npm start
 ```
-
-## 原理
-
-QClaw 登录后会把默认 provider 的 key 存在 `app-store.json`：
-
-```text
-authGateway.providers.qclaw.apiKey
-```
-
-该值通常是 Chromium/Electron `v10` 格式密文。脚本会从 macOS Keychain 读取 `QClaw Safe Storage` / `QClaw Key`，然后解密并打印明文 key。
 
 ## API 用法
 
@@ -81,7 +133,7 @@ curl --location --request POST 'https://mmgrcalltoken.3g.qq.com/aizone/v1/chat/c
   }'
 ```
 
-注意：该网关虽然兼容 OpenAI `chat/completions` 格式，但只传单条 `user` 消息会返回 `400 invalid request`。示例中保留了一条最小 `system` 消息用于验证。
+注意：该网关兼容 OpenAI `chat/completions` 格式，但必须同时传递 `system` 和 `user` 消息，只传单条 `user` 消息会返回 `400 invalid request`。
 
 ### 可用模型
 
@@ -102,16 +154,7 @@ QClaw 客户端菜单里的具体模型在 API 中使用 `pool-` 前缀模型 ID
 | Kimi-K2.6 | `pool-kimi-k2.6` | `200k` | `8192` |
 | MiniMax-M2.7 | `pool-minimax-m2.7` | `200k` | `8192` |
 
-`npm run models` 会直接调用 QClaw 客户端使用的模型列表接口，并输出当前状态、倍率和能力标签：
-
-```bash
-npm run models
-npm run models -- --json
-```
-
-模型状态来自 QClaw 实时接口，可能随账号、地区和服务负载变化。比如 `pool-glm-5.2` 在菜单中可能显示 `full`，但实际网关请求仍可能成功。
-
-`pool-hy3-preview` 会出现在模型列表中，但本次用同一 `chat/completions` 请求实测返回 `400 proxy_param_error`，因此暂不列入上面的可用模型表。
+`npm run models` 会直接调用 QClaw 客户端使用的模型列表接口，输出当前状态、倍率和能力标签。模型状态来自 QClaw 实时接口，可能随账号、地区和服务负载变化。
 
 如果是在 OpenClaw 里配置 provider，`baseUrl` 应填写：
 
@@ -120,35 +163,6 @@ https://mmgrcalltoken.3g.qq.com/aizone/v1
 ```
 
 不要带 `/chat/completions`；OpenClaw 会自行拼接后续路径。
-
-## 积分余额和用量
-
-```bash
-npm run balance
-```
-
-默认输出：
-
-- `points_balance`：当前总积分余额
-- `activity_points`：活动积分，等于 QClaw 返回的 `daily_free + activity_q`
-- `subscription_points`：订阅积分
-- `package_points`：积分包余额
-- `total_daily_free_granted`：活动/每日赠送积分总额
-- `point_flows_total`：积分流水总条数
-- `point_consumed_in_page`：当前页积分消耗合计
-- `point_gained_in_page`：当前页积分收入合计
-
-可选参数：
-
-```bash
-npm run balance -- --json
-npm run balance -- --json --records
-npm run balance -- --page 2 --page-size 50
-npm run balance -- --tokens
-npm run balance -- --tokens --date 2026-06-29
-```
-
-默认不会打印积分流水明细；只有显式加 `--records` 才会在 JSON 输出中包含原始流水。`--tokens` 会额外输出旧的每日 token quota 和指定日期 token 用量明细汇总。
 
 ## 常见问题
 
@@ -162,4 +176,4 @@ npm run balance -- --tokens --date 2026-06-29
 
 ### Keychain 弹出授权提示
 
-允许终端或 Node 访问 `QClaw Safe Storage`，否则无法解密本地密文。
+允许终端/Node/macOS 应用访问 `QClaw Safe Storage`，否则无法解密本地密文。
