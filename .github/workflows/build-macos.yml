@@ -1,0 +1,62 @@
+name: Build macOS App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'GetQClaw-macOS/**'
+      - '.github/workflows/build-macos.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'GetQClaw-macOS/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          cd GetQClaw-macOS
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Create DMG
+        run: |
+          APP_DIR="GetQClaw-macOS/build/GetQClaw.app"
+          DMG_NAME="GetQClaw.dmg"
+          DMG_DIR="dmg"
+
+          mkdir -p "$DMG_DIR"
+          cp -R "$APP_DIR" "$DMG_DIR/"
+          # Create symlink to /Applications for drag-to-install
+          ln -s /Applications "$DMG_DIR/Applications"
+
+          hdiutil create \
+            -volname "GetQClaw" \
+            -srcfolder "$DMG_DIR" \
+            -ov \
+            -format UDZO \
+            "$DMG_NAME"
+
+          echo "DMG created: $DMG_NAME"
+          ls -lh "$DMG_NAME"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GetQClaw
+          path: GetQClaw.dmg
+          retention-days: 30
+
+      - name: Upload app artifact (zip)
+        uses: actions/upload-artifact@v4
+        with:
+          name: GetQClaw-app
+          path: GetQClaw-macOS/build/GetQClaw.app
+          retention-days: 30
