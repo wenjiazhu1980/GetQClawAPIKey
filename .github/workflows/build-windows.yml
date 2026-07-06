@@ -1,0 +1,102 @@
+name: Build Windows CLI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'scripts/**'
+      - 'package.json'
+      - '.github/workflows/build-windows.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'scripts/**'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Bundle & Package
+        run: npm run build:win
+
+      - name: Upload get-qclaw-key.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: get-qclaw-key
+          path: dist/get-qclaw-key.exe
+          retention-days: 30
+
+      - name: Upload get-qclaw-models.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: get-qclaw-models
+          path: dist/get-qclaw-models.exe
+          retention-days: 30
+
+      - name: Upload get-qclaw-balance.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: get-qclaw-balance
+          path: dist/get-qclaw-balance.exe
+          retention-days: 30
+
+      # -------- Release (push to main / workflow_dispatch only) --------
+      - name: Delete old latest-win release
+        if: github.event_name != 'pull_request'
+        run: |
+          gh release delete latest-win --yes --cleanup-tag 2>$null
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create latest-win tag
+        if: github.event_name != 'pull_request'
+        run: |
+          git tag -f latest-win
+          git push -f origin latest-win
+
+      - name: Create Release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-win
+          name: "GetQClaw CLI — Latest Windows Build"
+          body: |
+            ## Windows 命令行工具
+
+            从已登录的 QClaw 客户端提取 API Key，查看模型列表和积分余额。
+
+            ### 使用
+
+            在 QClaw 客户端完成登录后，双击运行：
+
+            - `get-qclaw-key.exe` — 提取 API Key
+            - `get-qclaw-models.exe` — 查看可用模型列表
+            - `get-qclaw-balance.exe` — 查询积分余额和用量
+
+            > 构建自 commit [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+          files: |
+            dist/get-qclaw-key.exe
+            dist/get-qclaw-models.exe
+            dist/get-qclaw-balance.exe
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
