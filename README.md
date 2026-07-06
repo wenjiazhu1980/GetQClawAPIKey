@@ -1,17 +1,28 @@
 # GetQClawAPIKey
 
-> QClaw API Key 提取工具 — 从 macOS 本机已登录的 QClaw 客户端中解密并提取 API Key，支持 OpenAI 兼容的 `chat/completions` 接口调用。
+> QClaw API Key 提取工具 — 从已登录的 QClaw 客户端中解密并提取 API Key，支持 OpenAI 兼容的 `chat/completions` 接口调用。
 
-提供 **Node.js CLI** 和 **原生 SwiftUI macOS 菜单栏应用** 两种使用方式。无需模拟登录，从本地 Keychain 和 `app-store.json` 中自动解密，即可获取 QClaw API Key、查看可用模型列表（DeepSeek-V4、GLM-5.2、Kimi-K2.7 等）、查询积分余额与 Token 用量。
+支持 **macOS** 和 **Windows**，提供 **Node.js CLI**、**原生 SwiftUI macOS 菜单栏应用**、**Windows 独立 .exe（带 TUI 交互菜单）** 三种使用方式。无需模拟登录，从本地存储自动解密，即可获取 QClaw API Key、查看可用模型列表（DeepSeek-V4、GLM-5.2、Kimi-K2.7 等）、查询积分余额与 Token 用量。
+
+## 快速下载
+
+| 平台 | 下载 | 说明 |
+| --- | --- | --- |
+| macOS | [GetQClaw.dmg](https://github.com/wenjiazhu1980/GetQClawAPIKey/releases/latest) | 菜单栏应用，拖入 Applications 即可 |
+| Windows | [get-qclaw.exe](https://github.com/wenjiazhu1980/GetQClawAPIKey/releases/tag/latest-win) | 独立 .exe，双击进入 TUI 交互菜单 |
+
+> 两个平台均可在 [Releases](https://github.com/wenjiazhu1980/GetQClawAPIKey/releases) 页面找到最新构建。
 
 ## 项目结构
 
 ```
-├── lib/qclaw.mjs              # 核心库：解密、API 请求封装
+├── lib/qclaw.mjs              # 核心库：解密（Keychain / DPAPI）、API 请求
 ├── scripts/
+│   ├── cli.mjs                # 统一 TUI 交互入口（Windows .exe 打包源）
 │   ├── get-key.mjs            # 提取并打印 apiKey
 │   ├── models.mjs             # 查看可用模型列表
-│   └── balance.mjs            # 查询积分余额和用量
+│   ├── balance.mjs            # 查询积分余额和用量
+│   └── bundle.mjs             # esbuild 打包脚本
 ├── test/qclaw.test.mjs        # 单元测试
 ├── GetQClaw-macOS/            # macOS 菜单栏应用（SwiftUI）
 │   ├── Sources/               # Swift 源码
@@ -22,10 +33,43 @@
 
 ## 前置条件
 
-- macOS
-- 已安装 QClaw 客户端
-- 已打开 QClaw 并完成一次登录/授权
-- 运行时允许访问 macOS Keychain 中的 `QClaw Safe Storage`
+- 已安装 QClaw 客户端并完成一次登录/授权
+- **macOS**：运行时允许访问 Keychain 中的 `QClaw Safe Storage`
+- **Windows**：以当前用户身份运行（DPAPI 解密需要同一用户会话）
+
+## 下载使用（推荐）
+
+### macOS — 菜单栏应用
+
+从 [Releases](https://github.com/wenjiazhu1980/GetQClawAPIKey/releases/latest) 下载 `GetQClaw.dmg`，双击打开后将 `GetQClaw.app` 拖入 `Applications`。启动后菜单栏出现钥匙图标，点击可在 **API Key**、**模型列表**、**余额** 三个标签页间切换。
+
+首次运行时允许 Keychain 访问弹窗即可。
+
+### Windows — 独立 .exe
+
+从 [Releases](https://github.com/wenjiazhu1980/GetQClawAPIKey/releases/tag/latest-win) 下载 `get-qclaw.exe`，双击进入 TUI 交互菜单：
+
+```
+┌──────────────────────────────────────────────────┐
+│              GetQClaw CLI                        │
+├──────────────────────────────────────────────────┤
+│  1. Extract API Key                             │
+│  2. View Available Models                       │
+│  3. Check Balance & Usage                       │
+│                                                  │
+│  0. Exit                                        │
+└──────────────────────────────────────────────────┘
+```
+
+选择功能后显示结果，按 Enter 返回菜单。无需安装 Node.js，单文件即开即用。
+
+也支持命令行直接调用：
+
+```bash
+get-qclaw.exe key [--key-only]
+get-qclaw.exe models [--json]
+get-qclaw.exe balance [--json] [--records] [--tokens] [--date=2026-07-06]
+```
 
 ## Node.js CLI
 
@@ -41,6 +85,14 @@ npm start
 ```bash
 node scripts/get-key.mjs --key-only
 ```
+
+### TUI 交互模式（跨平台）
+
+```bash
+npm run cli
+```
+
+会启动一个终端交互菜单（同 Windows .exe 的界面），在 macOS / Linux / Windows 均可使用。
 
 ### 查看模型列表
 
@@ -73,9 +125,9 @@ npm test
 
 ## macOS 菜单栏应用
 
-一个原生 SwiftUI 菜单栏应用，在菜单栏显示 QClaw 图标，点击后可在 **API Key**、**模型列表**、**余额** 三个标签页间切换查看。
+一个原生 SwiftUI 菜单栏应用，在菜单栏显示钥匙图标，点击后可在 **API Key**、**模型列表**、**余额** 三个标签页间切换查看。
 
-### 构建
+### 本地构建
 
 ```bash
 cd GetQClaw-macOS
@@ -84,15 +136,19 @@ cd GetQClaw-macOS
 
 构建产物位于 `GetQClaw-macOS/build/GetQClaw.app`。
 
-### 运行
-
 ```bash
 open GetQClaw-macOS/build/GetQClaw.app
 ```
 
 或拖入 `/Applications` 后从启动台打开。首次运行需要在 Keychain 弹窗中允许访问。
 
+### GitHub Actions 自动构建
+
+每次推送到 `main` 分支时，CI 自动构建 `.dmg` 并发布到 [Releases](https://github.com/wenjiazhu1980/GetQClawAPIKey/releases/latest)。
+
 ## 原理
+
+### macOS
 
 QClaw 登录后将默认 provider 的 key 存在：
 
@@ -104,10 +160,24 @@ QClaw 登录后将默认 provider 的 key 存在：
 
 该值是 Chromium/Electron `v10` 格式密文。工具从 macOS Keychain 读取 `QClaw Safe Storage` / `QClaw Key`，使用 AES-128-CBC 解密后输出明文 key。
 
-也可以通过环境变量覆盖路径：
+### Windows
+
+存储位置：
+
+```text
+%APPDATA%\QClaw\app-store.json
+```
+
+Windows 上 Electron 使用 DPAPI（`CryptProtectData`）加密。工具通过 PowerShell 调用 `[System.Security.Cryptography.ProtectedData]::Unprotect()` 解密。
+
+### 环境变量覆盖
 
 ```bash
+# macOS
 QCLAW_APP_STORE_PATH=/path/to/app-store.json npm start
+
+# Windows
+set QCLAW_APP_STORE_PATH=C:\path\to\app-store.json && get-qclaw.exe key
 ```
 
 ## API 用法
@@ -170,10 +240,17 @@ https://mmgrcalltoken.3g.qq.com/aizone/v1
 
 先安装并打开 QClaw，完成一次登录/授权。
 
+- macOS：`~/Library/Application Support/QClaw/app-store.json`
+- Windows：`%APPDATA%\QClaw\app-store.json`
+
 ### 提示未找到 authGateway.providers.qclaw.apiKey
 
 说明 QClaw 还没有把默认 provider key 写入本地存储。打开 QClaw，确认登录状态正常，并让客户端完成初始化。
 
-### Keychain 弹出授权提示
+### macOS Keychain 弹出授权提示
 
 允许终端/Node/macOS 应用访问 `QClaw Safe Storage`，否则无法解密本地密文。
+
+### Windows 解密失败
+
+确保以当前登录用户身份运行 `get-qclaw.exe`（DPAPI 绑定用户会话）。不要在管理员模式下运行，除非 QClaw 也是在管理员模式下登录的。

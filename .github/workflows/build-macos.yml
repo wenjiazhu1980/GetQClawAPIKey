@@ -77,11 +77,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: "GetQClaw — Latest Build"
+          name: "GetQClaw — Latest macOS Build"
           body: |
             ## macOS 菜单栏应用
 
-            从已登录的 QClaw 客户端提取 API Key，查看模型列表和积分余额。
+            原生 SwiftUI 菜单栏应用，从已登录的 QClaw 客户端提取 API Key，查看模型列表和积分余额。
 
             ### 安装
 
@@ -89,7 +89,15 @@ jobs:
             2. 双击打开，将 `GetQClaw.app` 拖入 `Applications`
             3. 首次运行时允许 Keychain 访问
 
+            ### 功能
+
+            - **API Key** — 提取并复制明文 Key
+            - **模型列表** — 查看可用模型、状态、倍率
+            - **余额** — 积分余额与用量统计
+
             > 构建自 commit [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+            >
+            > Windows 版本：[latest-win](https://github.com/${{ github.repository }}/releases/tag/latest-win)
           files: GetQClaw.dmg
           make_latest: true
         env:
