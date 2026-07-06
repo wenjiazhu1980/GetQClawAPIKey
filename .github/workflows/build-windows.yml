@@ -38,25 +38,11 @@ jobs:
       - name: Bundle & Package
         run: npm run build:win
 
-      - name: Upload get-qclaw-key.exe
+      - name: Upload get-qclaw.exe
         uses: actions/upload-artifact@v4
         with:
-          name: get-qclaw-key
-          path: dist/get-qclaw-key.exe
-          retention-days: 30
-
-      - name: Upload get-qclaw-models.exe
-        uses: actions/upload-artifact@v4
-        with:
-          name: get-qclaw-models
-          path: dist/get-qclaw-models.exe
-          retention-days: 30
-
-      - name: Upload get-qclaw-balance.exe
-        uses: actions/upload-artifact@v4
-        with:
-          name: get-qclaw-balance
-          path: dist/get-qclaw-balance.exe
+          name: get-qclaw
+          path: dist/get-qclaw.exe
           retention-days: 30
 
       # -------- Release (push to main / workflow_dispatch only) --------
@@ -80,23 +66,35 @@ jobs:
           tag_name: latest-win
           name: "GetQClaw CLI — Latest Windows Build"
           body: |
-            ## Windows 命令行工具
+            ## Windows 命令行工具（带 TUI 交互菜单）
 
             从已登录的 QClaw 客户端提取 API Key，查看模型列表和积分余额。
 
             ### 使用
 
-            在 QClaw 客户端完成登录后，双击运行：
+            在 QClaw 客户端完成登录后，双击 `get-qclaw.exe` 进入交互菜单：
 
-            - `get-qclaw-key.exe` — 提取 API Key
-            - `get-qclaw-models.exe` — 查看可用模型列表
-            - `get-qclaw-balance.exe` — 查询积分余额和用量
+            ```
+            ┌──────────────────────────────────────────────────┐
+            │           GetQClaw CLI                          │
+            ├──────────────────────────────────────────────────┤
+            │  1. Extract API Key                             │
+            │  2. View Available Models                       │
+            │  3. Check Balance & Usage                       │
+            │                                                  │
+            │  0. Exit                                        │
+            └──────────────────────────────────────────────────┘
+            ```
+
+            也支持命令行直接调用：
+            ```
+            get-qclaw.exe key [--key-only]
+            get-qclaw.exe models [--json]
+            get-qclaw.exe balance [--json] [--records] [--tokens] [--date=2026-07-06]
+            ```
 
             > 构建自 commit [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-          files: |
-            dist/get-qclaw-key.exe
-            dist/get-qclaw-models.exe
-            dist/get-qclaw-balance.exe
+          files: dist/get-qclaw.exe
           make_latest: false
         env:
           GITHUB_TOKEN: ${{ github.token }}

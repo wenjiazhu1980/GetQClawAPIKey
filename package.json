@@ -10,7 +10,8 @@
     "balance": "node scripts/balance.mjs",
     "test": "node --test",
     "bundle": "node scripts/bundle.mjs",
-    "build:win": "npm run bundle && pkg dist/get-key.cjs --targets node18-win-x64 --output dist/get-qclaw-key.exe && pkg dist/models.cjs --targets node18-win-x64 --output dist/get-qclaw-models.exe && pkg dist/balance.cjs --targets node18-win-x64 --output dist/get-qclaw-balance.exe"
+    "cli": "node scripts/cli.mjs",
+    "build:win": "npm run bundle && pkg dist/cli.cjs --targets node18-win-x64 --output dist/get-qclaw.exe"
   },
   "devDependencies": {
     "@yao-pkg/pkg": "^5.16.0",
