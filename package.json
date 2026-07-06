@@ -1,0 +1,13 @@
+{
+  "name": "get-qclaw-api-key",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CLI tool to extract apiKey from a logged-in local QClaw installation",
+  "scripts": {
+    "start": "node scripts/get-key.mjs",
+    "key": "node scripts/get-key.mjs",
+    "models": "node scripts/models.mjs",
+    "balance": "node scripts/balance.mjs",
+    "test": "node --test"
+  }
+}
